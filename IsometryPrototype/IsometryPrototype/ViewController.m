@@ -20,15 +20,22 @@ const int map[mapRows][mapColumns] = {
     1, 0, 0, 0, 0, 0, 0, 0, 0, 1,
     1, 1, 1, 1, 0, 0, 1, 1, 1, 1,
 };
-const CGFloat tileSize = 30.0;
+const CGFloat tileSize          = 30.0; // for carthesian display
+const CGFloat tileIsoHeight     = 30.0; // for isometric display
+const CGFloat tileIsoWidth      = 60.0;
+const CGFloat tileIsoHeightHalf = 15.0; // for isometric calculations
+const CGFloat tileIsoWidthHalf  = 30.0;
+
+CGFloat offset; // will be used to show the map only on the positive X axis
 
 @interface ViewController ()
 
 - (void)drawArrayMap;
 - (void)drawArrayTile:(int)type inView:(UIView *)container atPoint:(CGPoint)position;
-- (void)drawIsometricTile:(int)type inView:(UIView *)container atPoint:(CGPoint)position xOffset:(CGFloat)offset;
+- (void)drawIsometricTile:(int)type inView:(UIView *)container atPoint:(CGPoint)position;
 - (void)addInputInView:(UIView *)targetView;
 - (void)handleInputFrom:(UIGestureRecognizer *)recognizer;
+- (void)updateStatusLabelWithScreenLocation:(CGPoint)position;
 
 // screen/grid
 - (CGPoint)gridFromScreen:(CGPoint)position;
@@ -63,6 +70,12 @@ const CGFloat tileSize = 30.0;
     
     [statusLabel setText:@""];
     
+    
+    // since for Y increases in isometric projection the screen X coordinates can go <0, I'll add lowest value as an offset for all tiles
+    // the 'leftmost' position would be (mapRows - 1), so I'll use its X coordinate
+    CGPoint isoLimit = [self isoFromGridX:0 andY:(mapRows - 1) * tileSize];
+    offset = isoLimit.x;
+    
     [self drawArrayMap];
     // add gesture recognizer to detect taps
     [self addInputInView:containerView];
@@ -73,21 +86,35 @@ const CGFloat tileSize = 30.0;
 
 - (void)drawArrayMap
 {
- 
-    // since for Y increases in isometric projection the screen X coordinates can go <0, I'll add lowest value as an offset for all tiles
-    // the 'leftmost' position would be (mapRows - 1), so I'll use its X coordinate
-    CGPoint isoLimit = [self isoFromGridX:0 andY:(mapRows - 1) * tileSize];
     
     for (int row = 0; row < mapRows; ++row) {
         for (int column = 0; column < mapColumns; ++column) {
             CGPoint tilePosition = CGPointZero;
-            tilePosition.x = column * tileSize;
-            tilePosition.y = row * tileSize;
-//            [self drawArrayTile:map[row][column] inView:containerView atPoint:tilePosition]; // for drawing in carthesian
-            [self drawIsometricTile:map[row][column] inView:containerView atPoint:tilePosition xOffset:isoLimit.x]; // for drawing in isometric
+            // for drawing in carthesian
+//            tilePosition.x = column * tileSize;
+//            tilePosition.y = row * tileSize;
+//            [self drawArrayTile:map[row][column] inView:containerView atPoint:tilePosition];
+            
+            // for drawing isometric
+            tilePosition = [self screenFromIso:CGPointMake(column, row)];
+            [self drawIsometricTile:map[row][column] inView:containerView atPoint:tilePosition]; // for drawing in isometric
         }
     }
    
+}
+
+- (void)updateStatusLabelWithScreenLocation:(CGPoint)position
+{
+    
+//    CGPoint gridLocation = [self gridFromScreen:position];
+    
+    CGPoint isoLocation = [self isoFromScreen:position];
+    isoLocation.x = floorf(isoLocation.x);
+    isoLocation.y = floorf(isoLocation.y);
+    
+//    NSString *str = [NSString stringWithFormat:@"Actual position: %@\nGrid position: %@\nSnapped screen position: %@", NSStringFromCGPoint(position), NSStringFromCGPoint(gridLocation), NSStringFromCGPoint([self screenFromGridX:gridLocation.x andY:gridLocation.y])];
+    NSString *str = [NSString stringWithFormat:@"Actual position: %@\nIsometric grid position: %@", NSStringFromCGPoint(position), NSStringFromCGPoint(isoLocation)];
+    [statusLabel setText:str];
     
 }
 
@@ -106,20 +133,12 @@ const CGFloat tileSize = 30.0;
     
 }
 
-- (void)drawIsometricTile:(int)type inView:(UIView *)container atPoint:(CGPoint)position xOffset:(CGFloat)offset
+- (void)drawIsometricTile:(int)type inView:(UIView *)container atPoint:(CGPoint)position
 {
     
-    // get position in isometric projection
-    CGPoint isoPosition = [self isoFromGridX:position.x andY:position.y];
-        
-    UIView *tileView = [[UIView alloc] initWithFrame:CGRectMake(isoPosition.x + fabs(offset), isoPosition.y, tileSize, tileSize)];
-    UIColor *tileColor = nil;
-    if (type == 0) {
-        tileColor = [UIColor greenColor];
-    } else {
-        tileColor = [UIColor yellowColor];
-    }
-    [tileView setBackgroundColor:tileColor];
+    UIImageView *tileView = [[UIImageView alloc] initWithFrame:CGRectMake(position.x + fabs(offset), position.y, tileIsoWidth, tileIsoHeight)];
+    UIImage *image = [UIImage imageNamed:[NSString stringWithFormat:@"tile%d", type]];
+    [tileView setImage:image];
     [container addSubview:tileView];
     
 }
@@ -137,10 +156,7 @@ const CGFloat tileSize = 30.0;
     
     CGPoint location = [recognizer locationInView:containerView];
     
-    CGPoint gridLocation = [self gridFromScreen:location];
-    
-    NSString *str = [NSString stringWithFormat:@"Actual position: %@\nGrid position: %@\nSnapped screen position: %@", NSStringFromCGPoint(location), NSStringFromCGPoint(gridLocation), NSStringFromCGPoint([self screenFromGridX:gridLocation.x andY:gridLocation.y])];
-    [statusLabel setText:str];
+    [self updateStatusLabelWithScreenLocation:location];
     
 }
 
@@ -190,8 +206,14 @@ const CGFloat tileSize = 30.0;
 - (CGPoint)isoFromScreen:(CGPoint)position
 {
     
+    // remove offset
+    position.x -= fabsf(offset);
+    // tile drawing is from top left corner, not top center
+    position.x -= tileIsoWidthHalf;
+    
     CGPoint result = CGPointZero;
-
+    result.x = ((position.x / tileIsoWidthHalf) + (position.y / tileIsoHeightHalf)) / 2;
+    result.y = ((position.y / tileIsoHeightHalf) - (position.x / tileIsoWidthHalf)) / 2;
     return result;
 
 }
@@ -200,7 +222,8 @@ const CGFloat tileSize = 30.0;
 {
 
     CGPoint result = CGPointZero;
-    
+    result.x = (position.x - position.y) * tileIsoWidthHalf;
+    result.y = (position.x + position.y) * tileIsoHeightHalf;
     return result;
 
 }

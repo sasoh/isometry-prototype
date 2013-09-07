@@ -8,8 +8,8 @@ To do:
 - [x] implement a simple 2d grid
 - [x] display grid in normal carthesian coordinate system
 - [x] display grid in isometric projection
-- [ ] detect touch location
-- [ ] convert touch locations from screen space to isometric & vice versa
+- [x] detect touch location
+- [x] convert touch locations from screen space to isometric & vice versa
 
 
 Done:
@@ -41,3 +41,9 @@ display grid in normal carthesian coordinate system
 display grid in isometric projection
 ---
 ![](http://i.imgur.com/NLVmB3T.png)
+
+detect touch location
+---
+convert touch locations from screen space to isometric & vice versa
+---
+![](http://i.imgur.com/Aaiw4uY.png)
