@@ -26,12 +26,21 @@ const CGFloat tileSize = 30.0;
 
 - (void)drawArrayMap;
 - (void)drawArrayTile:(int)type inView:(UIView *)container atPoint:(CGPoint)position;
+- (void)drawIsometricTile:(int)type inView:(UIView *)container atPoint:(CGPoint)position xOffset:(CGFloat)offset;
 - (void)addInputInView:(UIView *)targetView;
 - (void)handleInputFrom:(UIGestureRecognizer *)recognizer;
 
-// screen to grid
+// screen/grid
 - (CGPoint)gridFromScreen:(CGPoint)position;
 - (CGPoint)screenFromGridX:(int)column andY:(int)row;
+
+// grid/isometric grid
+- (CGPoint)isoFromGridX:(int)column andY:(int)row;
+- (CGPoint)gridFromIso:(CGPoint)position;
+
+// screen/isometric grid
+- (CGPoint)isoFromScreen:(CGPoint)position;
+- (CGPoint)screenFromIso:(CGPoint)position;
 
 @end
 
@@ -64,16 +73,21 @@ const CGFloat tileSize = 30.0;
 
 - (void)drawArrayMap
 {
+ 
+    // since for Y increases in isometric projection the screen X coordinates can go <0, I'll add lowest value as an offset for all tiles
+    // the 'leftmost' position would be (mapRows - 1), so I'll use its X coordinate
+    CGPoint isoLimit = [self isoFromGridX:0 andY:(mapRows - 1) * tileSize];
     
     for (int row = 0; row < mapRows; ++row) {
         for (int column = 0; column < mapColumns; ++column) {
             CGPoint tilePosition = CGPointZero;
             tilePosition.x = column * tileSize;
             tilePosition.y = row * tileSize;
-            [self drawArrayTile:map[row][column] inView:containerView atPoint:tilePosition];
+//            [self drawArrayTile:map[row][column] inView:containerView atPoint:tilePosition]; // for drawing in carthesian
+            [self drawIsometricTile:map[row][column] inView:containerView atPoint:tilePosition xOffset:isoLimit.x]; // for drawing in isometric
         }
     }
-    
+   
     
 }
 
@@ -81,6 +95,24 @@ const CGFloat tileSize = 30.0;
 {
     
     UIView *tileView = [[UIView alloc] initWithFrame:CGRectMake(position.x, position.y, tileSize, tileSize)];
+    UIColor *tileColor = nil;
+    if (type == 0) {
+        tileColor = [UIColor greenColor];
+    } else {
+        tileColor = [UIColor yellowColor];
+    }
+    [tileView setBackgroundColor:tileColor];
+    [container addSubview:tileView];
+    
+}
+
+- (void)drawIsometricTile:(int)type inView:(UIView *)container atPoint:(CGPoint)position xOffset:(CGFloat)offset
+{
+    
+    // get position in isometric projection
+    CGPoint isoPosition = [self isoFromGridX:position.x andY:position.y];
+        
+    UIView *tileView = [[UIView alloc] initWithFrame:CGRectMake(isoPosition.x + fabs(offset), isoPosition.y, tileSize, tileSize)];
     UIColor *tileColor = nil;
     if (type == 0) {
         tileColor = [UIColor greenColor];
@@ -112,6 +144,7 @@ const CGFloat tileSize = 30.0;
     
 }
 
+// screen/grid
 - (CGPoint)gridFromScreen:(CGPoint)position
 {
     
@@ -130,6 +163,46 @@ const CGFloat tileSize = 30.0;
     result.y = row * tileSize;
     return result;
     
+}
+
+// grid/isometric grid
+- (CGPoint)isoFromGridX:(int)column andY:(int)row
+{
+
+    CGPoint result = CGPointZero;
+    result.x = column - row;
+    result.y = (column + row) / 2;
+    return result;
+    
+}
+
+- (CGPoint)gridFromIso:(CGPoint)position
+{
+
+    CGPoint result = CGPointZero;
+    result.x = (2 * position.y + position.x) / 2;
+    result.y = (2 * position.y - position.x) / 2;
+    return result;
+
+}
+
+// screen/isometric grid
+- (CGPoint)isoFromScreen:(CGPoint)position
+{
+    
+    CGPoint result = CGPointZero;
+
+    return result;
+
+}
+
+- (CGPoint)screenFromIso:(CGPoint)position
+{
+
+    CGPoint result = CGPointZero;
+    
+    return result;
+
 }
 
 @end

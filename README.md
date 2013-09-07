@@ -7,7 +7,7 @@ To do:
 ===
 - [x] implement a simple 2d grid
 - [x] display grid in normal carthesian coordinate system
-- [ ] display grid in isometric projection
+- [x] display grid in isometric projection
 - [ ] detect touch location
 - [ ] convert touch locations from screen space to isometric & vice versa
 
@@ -37,3 +37,7 @@ I used a simple non-square 2D integer array, each value representing a tile iden
 display grid in normal carthesian coordinate system
 ---
 ![](http://i.imgur.com/qjFMv4r.png)
+
+display grid in isometric projection
+---
+![](http://i.imgur.com/NLVmB3T.png)
